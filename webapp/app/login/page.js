@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [type, setType] = useState("login"); // login or register
   const [msg, setMsg] = useState("");
+
+  const BACKEND = "https://skill-job-backend.onrender.com";
 
   async function handleSubmit() {
     setMsg("");
@@ -17,24 +18,43 @@ export default function LoginPage() {
       return;
     }
 
-    if (type === "login") {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+    try {
+      if (type === "login") {
+        const res = await fetch(`${BACKEND}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include", // important for cookie/session
+          body: JSON.stringify({ email, password })
+        });
 
-      if (error) setMsg(error.message);
-      else window.location.href = "/chat";
-    }
+        const data = await res.json();
 
-    if (type === "register") {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      });
+        if (res.ok) {
+          window.location.href = "/chat";
+        } else {
+          setMsg(data.error || "Login failed");
+        }
+      }
 
-      if (error) setMsg(error.message);
-      else setMsg("Account created! Check your email if confirmation is enabled.");
+      if (type === "register") {
+        const res = await fetch(`${BACKEND}/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email, password })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          setMsg("Account created! You can now login.");
+          setType("login");
+        } else {
+          setMsg(data.error || "Registration failed");
+        }
+      }
+    } catch (err) {
+      setMsg("Network error: " + err.message);
     }
   }
 
